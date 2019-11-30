@@ -1,0 +1,15 @@
+/*
+Some text
+*/
+
+//lc
+
+LHS : part part ;
+
+/*  some text */  
+
+LHS    : 
+part part blah;  // midline comment
+
+//  Final text
+
