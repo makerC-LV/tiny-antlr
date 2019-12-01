@@ -17,89 +17,110 @@ import shiva.swingcfg.ParseTreeView
 @CompileStatic
 class SmallAntlrGrammar extends Grammar {
 
-	// lhs : exp ;
-	// exp : literal | ident | pExp | qmarkExp | starExp | plusExp | altExp | seqExp
-	// qmarkExp : exp ?
-	// altExp : ( exp ( | exp )* )
-	
-	Rule SQuote = lit("'")
-	Rule Star = lit("*")
-	Rule Plus = lit("+")
+	/**
+	 * Program -> Body EOF
+	 * Body -> BodyPart*
+	 * BodyPart -> LC | BC | RuleDef
+	 * RuleDef -> Ident ':' Exp ';'
+	 * Exp -> Seq | Alt | Opt | Star | Plus
+	 * Seq -> Unit+
+	 * Unit -> Lit | Reg | Ident | Group
+	 * Group -> '(' Exp ')'
+	 * Alt -> Unit ('|' Unit)+
+	 * Opt -> Unit '?'
+	 * Star -> Unit '*'
+	 * Plus -> Unit '+'
+	 *
+	 */
+
+
+	Rule LitStar = lit("*")
+	Rule LitPlus = lit("+")
 	Rule LPar = lit("(")
 	Rule RPar = lit(")")
 	Rule Qmark = lit("?")
-	Rule Bar = lit("?")
+	Rule Bar = lit("|")
 	Rule Ident = identifier()
 	Rule Literal = reg("'.*?'")
 	Rule Regex = seq(lit("/.*?/"))
-	
-	Lazy Exp = lazy()
-	Rule OptExp = alt(seq(Ident, Qmark), seq(Exp, Qmark))
-	
-	Rule IdentStar = seq(Ident, Star)
-	Rule ExpStar = seq(LPar, Exp, RPar, Star)
-	Rule StarExp = alt(IdentStar,  ExpStar)
-	
-	Rule IdentPlus = seq(Ident, Plus)
-	Rule ExpPlus = seq(LPar, Exp, RPar, Plus)
-	
-	Rule PlusExp = alt(IdentPlus,  ExpPlus)
-	
-	Rule OptTail = seq(Bar, Exp)
-	Rule OptTailStar = star(OptTail)
-	
-	Rule AltExp = seq(LPar, Exp, OptTailStar, RPar)
-	Rule SeqExp = seq(Exp)
-	
+
 	Rule LineComment = lineComment()
 	Rule BlockComment = blockComment()
-	
-	
-	Rule  ruleDef = seq(Ident, lit(":"), Exp, lit(";")).skipWs()
-	Rule filePart = alt(LineComment, BlockComment, ruleDef).skipWs()
-	Rule body = plus(filePart);
-	Sequence start = seq(body, eof())
-	
-	public SmallAntlrGrammar() {
-		Exp.setRule(alt(Literal, Regex, Ident, OptExp, StarExp, PlusExp, AltExp, SeqExp))
-		
-		assignNamesToRules()
-	}
-	
-	public ParseNode parse() {
 
-		String defn = this.getClass().getResource('/sargam.bnf').text
-		
-		StringDocument doc = new StringDocument(defn);
-		
-		return parse(start, doc);
-		
+	Lazy Group = lazy()
+	Rule Unit = alt(Literal, Regex, Ident, Group)
+
+	Rule Seq = plus(Unit)
+	Rule Alt = seq(Unit, plus(seq(Bar, Unit)))
+
+
+
+	Rule Opt = seq(Unit, Qmark)
+	Rule Star = seq(Unit, LitStar)
+	Rule Plus = seq(Unit, LitPlus)
+
+	Lazy Exp = lazy()
+	Rule RuleDef = seq(Ident, lit(":"), Exp, lit(";"))
+	Rule BodyPart = alt(LineComment, BlockComment, RuleDef)
+	Rule Body = plus(BodyPart)
+	Rule Program = seq(Body, eof())
+
+
+
+	public SmallAntlrGrammar() {
+
+		createRules()
+
+		//		Exp.setRule(alt(Literal, Regex, Ident, OptExp, StarExp, PlusExp, AltExp, SeqExp))
+		assignNamesToRules()
+		Program.skipWsRecursive()
 	}
-	
+
+	private void createRules() {
+
+		Group.setRule(seq(LPar, Exp, RPar))
+		Exp.setRule(alt(Alt, Opt, Star, Plus, Seq))
+	}
+
+
+
+	public ParseNode parse(StringDocument doc) {
+
+		return parse(Program, doc);
+	}
+
+
+
+
+
 	// Set the names of the instance rules
 	protected assignNamesToRules() {
 		for (Field f in this.class.declaredFields) {
 			try {
 				Type t = f.type
-//				println("Field $f.name class ${t.name}")
 				if (Rule.class.isAssignableFrom((Class) t)) {
 					Rule r = f.get(this) as Rule
-//					println("Setting $f.name")
 					r.setName(f.name)
 				} else {
-//					println "Not assignable"
 				}
 			} catch (IllegalAccessException) {
-//				println "Exc for $f.name"
 			}
 		}
 	}
+
 	public static void main(String[] args) {
+		String defn = SmallAntlrGrammar.class.getResource('/sargam.bnf').text
+
+		StringDocument doc = new StringDocument(defn);
 		Rule.DEBUG = true
 		SmallAntlrGrammar ag = new SmallAntlrGrammar()
-		ParseNode pn = ag.parse()
+		ParseNode pn = ag.parse(doc)
 		ParseTreeView.show(ParseTreeNode.construct(pn))
+
+		GrammarGenerator gg = new GrammarGenerator(ag)
+		gg.generate(pn, doc)
+
 		println("done");
-//		println "/a\\/b".matches("^/.*?/\$")
+		//		println "/a\\/b".matches("^/.*?/\$")
 	}
 }

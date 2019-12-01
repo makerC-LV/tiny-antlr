@@ -33,37 +33,48 @@ abstract public class Rule {
 		ignoreWhitespace = true;
 		return this;
 	}
+	public String getName() {
+		return name
+	}
 	
 	public Rule setName(String s) {
 		name = s;
 		return this;
 	}
 	
-	@Override
-	public boolean equals(Object obj) {
-		return this == obj;
-	}
-
 
 	public ParseNode apply(Document doc, int start) {
-		if (debug || DEBUG) {
-			println("Applying ${getDescription()} to: ${doc.getDiagnostic(start, 40)}")
+		try {
+			unguardedApply(start, doc);
+		} catch (Exception e) {
+			throw new RuntimeException("While applying ${getDescription()}", e)
 		}
-		ParseNode cached = cache.get(start);
+	}
+
+	private ParseNode unguardedApply(int start, Document doc) {
 
 		if (ignoreWhitespace) {
 			start += skipWhitespace(doc, start)
 		}
+		if (debug || DEBUG) {
+			println("Applying ${getDescription()} [start:$start] to: ..[${doc.getDiagnostic(start, 40)}]..")
+		}
+		ParseNode cached = cache.get(start);
 		ParseNode res = cached == null ? applyInternal(doc, start) : cached;
 		cache.put(start, res)
 
 		if (debug || DEBUG) {
 			println(res);
+			if (res.matched) {
+				int end = start + res.matchLength
+				println "Matched $start-$end ..[" + doc.subseq(start, start + res.matchLength) + "].."
+			}
 		}
 		if (res == null) {
 			Thread.dumpStack()
 		}
-		return res;
+
+		return res
 	}
 
 
@@ -115,6 +126,7 @@ abstract public class Rule {
 		if (visited.contains(this)) {
 			if (getDescription() == null) {
 				label = getClass().getName().split("\\.").last()
+				System.out.println("AssignDescriptionDfs: After assigning default name: $label")
 			}
 			return
 		} else {
@@ -141,4 +153,17 @@ abstract public class Rule {
 		dependencies().each { r -> resetCacheDfs(visited) }
 	}
 	
+	public void skipWsRecursive() {
+		Set<Rule> visited = new HashSet<>()
+		skipWsDfs(visited);
+	}
+
+	protected void skipWsDfs(HashSet<Rule> visited) {
+		if (visited.contains(this)) {
+			return
+		}
+		skipWs()
+		visited.add(this)
+		dependencies().each { r -> r.skipWsDfs(visited) }
+	}
 }

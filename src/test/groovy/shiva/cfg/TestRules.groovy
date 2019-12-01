@@ -1,6 +1,9 @@
 package shiva.cfg
 
 import static org.junit.Assert.*
+
+import groovy.transform.CompileStatic
+
 import static Rules.*
 import org.junit.Test
 
@@ -51,13 +54,26 @@ class TestRules {
 
 	@Test
 	public void testStar() {
-		Rule star = star(lit("a"));
-		ParseNode n = star.apply(doc, 0)
+		Rule st1 = star(lit("a"))
+		ParseNode n = st1.apply(doc, 0)
 		assertTrue(n.matched);
 		assertEquals(3, n.matchLength)
-		n = star.apply(doc, 3)
+		n = st1.apply(doc, 3)
 		assertTrue(n.matched);
 		assertEquals(0, n.matchLength)
+		
+		
+		Rule st2 = star(lit("b"))
+		n = st2.apply(doc, 4)
+		assertTrue(n.matched);
+		assertEquals(1, n.matchLength)
+		
+		st2.resetCache()
+		st2.skipWs()
+		
+		n = st2.apply(doc, 4)
+		assertTrue(n.matched);
+		assertEquals(3, n.matchLength)
 		
 	}
 
@@ -87,12 +103,12 @@ class TestRules {
 		assertTrue(n.matched);
 		assertEquals(3, n.matchLength)
 		
-		Rule.DEBUG = true
+		
 		Sequence sq2 = seq(a, a, a, b, b).skipWs()
 		n = sq2.apply(doc, 0)
 		assertTrue(n.matched);
 		
-		Rule.DEBUG = false
+		
 		Sequence sq4 = seq(a, a, a, b, b)
 		n = sq4.apply(doc, 0)
 		assertFalse(n.matched);

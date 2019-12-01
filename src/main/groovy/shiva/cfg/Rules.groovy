@@ -17,6 +17,9 @@ class Rules {
 
 		@Override
 		public ParseNode apply(Document doc, int start) {
+			if (rule == null) {
+				println "Lazy missing rule: ${getDescription()}"
+			}
 			return rule.apply(doc, start);
 		}
 
@@ -46,7 +49,7 @@ class Rules {
 			for (Rule app in alt) {
 				ParseNode r = app.apply(doc, start);
 				if (r.matched) {
-					ParseNode res =  passNode(start, r.matchLength, r);
+					ParseNode res =  passNode(r.start, r.matchLength, r);
 					return res;
 				}
 			}
@@ -123,7 +126,7 @@ class Rules {
 			//Result myRes = new Result(true, this, start, 0, null)
 			ParseNode res = rule.apply(doc, start)
 			if (res.matched)  {
-				return passNode(start, res.matchLength, res)
+				return passNode(res.start, res.matchLength, res)
 			} else {
 				return passNode(start, 0)
 			}
@@ -144,14 +147,14 @@ class Rules {
 
 	@TupleConstructor
 	public static class Sequence extends Rule {
-		Rule[] elements;
-
+		Rule[] elements = [];
+		
 		@Override
 		protected ParseNode applyInternal(Document doc, int start) {
 			//Result myRes = new Result(true, this, start, 0, null);
 			List<ParseNode> children = []
-			int wslen
-			int len
+			int wslen = 0
+			int len = 0
 			int index = start
 			for (app in elements) {
 				ParseNode res = app.apply(doc, index);
@@ -188,9 +191,6 @@ class Rules {
 			return this
 		}
 
-//		Sequence spaceSep() {
-//			return separatedBy(opt(ws()));
-//		}
 
 		@Override
 		protected String descriptionFromDependencies() {
@@ -220,7 +220,7 @@ class Rules {
 	
 	static class Plus extends Sequence {
 		Plus(Rule a) {
-			elements = [a, new Star(a)]
+			super([a, new Star(a)] as Rule[])
 		}
 		@Override
 		protected String descriptionFromDependencies() {

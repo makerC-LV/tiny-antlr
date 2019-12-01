@@ -4,12 +4,12 @@ Some text
 
 //lc
 
-LHS : part part ;
+LHS : 'part1' 'part2' ;
 
 /*  some text */  
 
-LHS    : 
-part part blah;  // midline comment
+LHS2    : 
+'part' |'part'| 'blah';  // midline comment
 
 //  Final text
 
