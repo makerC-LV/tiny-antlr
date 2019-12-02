@@ -10,9 +10,9 @@ import groovy.transform.CompileStatic
 import shiva.cfg.ParseNode.ErrorInfo
 
 @CompileStatic
-class Grammar {
+class DefaultParser {
 	
-	public Grammar() {
+	public DefaultParser() {
 		
 	}
 	
@@ -38,21 +38,19 @@ class Grammar {
 
 	public ParseNode parse(Rule app, Document d) {
 		app.setDescriptions()
-		app.resetCache()
+		//app.resetCache()
 		ParseNode r = app.apply(d, 0);
 		if (!r.matched) {
 			ErrorInfo ei = r.errorInfo(d);
 			
-			System.err.println("Line: $ei.line Col: $ei.lineOffset Expected: ${ei.expect}  \
+			throw new ParseException("Line: $ei.line Col: $ei.lineOffset Expected: ${ei.expect}  \
 Found: ${d.getDiagnostic(ei.docOffset, 40)} ");
-		} else {
-			println(r)
-		}
+		} 
 		return r;
 	}
 	
 	static void main(String[] args) {
-		Grammar g = new Grammar()
+		DefaultParser g = new DefaultParser()
 		Document doc = new StringDocument("a b  a b B y e")
 //		Document doc = new StringDocument("")
 		Rule a = lit("a").setName("A");

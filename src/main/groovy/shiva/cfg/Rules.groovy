@@ -34,7 +34,7 @@ class Rules {
 		}
 
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			return rule.getDescription();
 		}
 	}
@@ -57,7 +57,7 @@ class Rules {
 		}
 
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			StringBuilder sb = new StringBuilder()
 			boolean first = true
 			for (Rule app in alt) {
@@ -106,7 +106,7 @@ class Rules {
 		}
 
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			return rule.getDescription() + "*";
 		}
 
@@ -133,7 +133,7 @@ class Rules {
 		}
 
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			return rule.getDescription() + "?";
 		}
 
@@ -193,7 +193,7 @@ class Rules {
 
 
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			StringBuilder s = new StringBuilder();
 			s.append("Seq[")
 			boolean first = true
@@ -223,7 +223,7 @@ class Rules {
 			super([a, new Star(a)] as Rule[])
 		}
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			return elements[0].getDescription() + "+";
 		}
 	}
@@ -234,7 +234,7 @@ class Rules {
 		String literal;
 
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			return "'" + literal + "'";
 		}
 
@@ -268,7 +268,7 @@ class Rules {
 		}
 
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			return "re(" + regex + ")"
 		}
 
@@ -296,7 +296,7 @@ class Rules {
 	static class EOF extends Rule {
 
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			return "<EOF>";
 		}
 
@@ -319,7 +319,7 @@ class Rules {
 	static class EPS extends Rule {
 
 		@Override
-		protected String descriptionFromDependencies() {
+		public String descriptionFromDependencies() {
 			return "*Eps";
 		}
 

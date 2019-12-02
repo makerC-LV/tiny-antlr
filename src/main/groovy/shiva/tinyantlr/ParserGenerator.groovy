@@ -1,4 +1,4 @@
-package shiva.antlr
+package shiva.tinyantlr
 
 import shiva.cfg.ParseNode
 import shiva.cfg.Rule
@@ -8,28 +8,30 @@ import static shiva.cfg.Rules.*
 import groovy.transform.CompileStatic
 
 @CompileStatic
-class GrammarGenerator {
+class ParserGenerator {
 
-	public static boolean DEBUG
-	SmallAntlrGrammar grammar
+	public static boolean DEBUG 
+	TinyAntlr grammar
 
 
-	public GrammarGenerator(SmallAntlrGrammar grammar) {
+	public ParserGenerator(TinyAntlr grammar) {
 		super();
 		this.grammar = grammar;
 	}
 
-	public Map<String, Rule> generate(ParseNode pn, Document doc) {
-		Map<String, ParseNode> ruleDefs = [:]
-		findRuleDefs(pn, doc, ruleDefs)
+	public GeneratedParser generate(ParseNode pn, Document grammarDoc) throws UndefinedSymbolException {
+		Map<String, ParseNode> ruleDefs = new LinkedHashMap<>()
+		findRuleDefs(pn, grammarDoc, ruleDefs)
 		// Create priority q of dependencies
 		PriorityQueue<Dependencies> pq = new PriorityQueue()
 		ruleDefs.each { s, n ->  
 			Dependencies d = new Dependencies(s)
-			fillDependencies(n, doc, d)
+			fillDependencies(n, grammarDoc, d)
 			pq.add(d)
 		}
-
+		
+		checkForUndefinedSymbols(pq, ruleDefs.keySet())
+		
 		//Process rules in order of increasing dependency size
 		Map<String, Rule> generated =[:]
 		while (!pq.isEmpty()) {
@@ -40,13 +42,17 @@ class GrammarGenerator {
 			}
 			// Create a lazy rule for each dependency of ident
 			d.each { s -> 
-				generated[s] = lazy().setName(s)
-				if (DEBUG) {
-					println "Creating lazy rule $s"
+				if (s.equals('EOF')) {
+					generated[s] = eof()
+				} else {
+					generated[s] = lazy().setName(s)
+					if (DEBUG) {
+						println "Creating lazy rule $s"
+					}
 				}
 			 }
 			// Define the rule for ident
-			Rule defn = defineRule(ruleDefs[ident], doc, generated)
+			Rule defn = defineRule(ruleDefs[ident], grammarDoc, generated)
 			Rule predef = generated[ident]
 			if (predef != null) {
 				assert predef instanceof Lazy : "Predefined rule $ident must be a Lazy, not ${predef.class.name}"
@@ -65,8 +71,8 @@ class GrammarGenerator {
 			}
 			// Update the priority queue, removing all the dependencies for
 			// which rules have been defined (lazy or otherwise )
-			Dependencies[] deps = []
-			deps += pq
+			List<Dependencies> deps = []
+			deps.addAll(pq)
 			pq.clear()
 			deps.each { dep ->
 				dep.removeAll(d)
@@ -75,9 +81,24 @@ class GrammarGenerator {
 			}
 			
 		}
-		return generated
+		
+		List<Rule> orderedRules = []
+		ruleDefs.keySet().each { name -> orderedRules << generated[name]  }
+		return new GeneratedParser(orderedRules, generated)
 
 	}
+	
+	private void checkForUndefinedSymbols(PriorityQueue<Dependencies> pq, Set<String> symbols) 
+	throws UndefinedSymbolException {
+		Set<String> allSymbols = new HashSet<String>()
+		pq.each { d -> allSymbols.addAll(d) }
+		StringBuilder sb = new StringBuilder()
+		allSymbols.each { s -> if (!symbols.contains(s)) {sb.append(s); sb.append(" ") }}
+		if (sb.length() > 0) {
+			throw new UndefinedSymbolException("Undefined symbols: " + sb.toString())
+		}
+	}
+	
 	
 	private void fillDependencies(ParseNode pn, Document doc, Dependencies d) {
 		if (!pn.matched) {
@@ -116,64 +137,82 @@ class GrammarGenerator {
 	Rule defineRule(ParseNode pn, Document doc, Map<String, Rule> rules) {
 		Rule r = pn.rule
 		if (r instanceof Lazy) {
-			r = r.rule
+			Lazy l = r as Lazy
+			r = l.getRule()
 		}
-		if (r == grammar.Alt) {
-			return defineAlt(pn, doc, rules)
-		}
-		Rule[] childRules = []
-		pn.children.each { cn ->
-			Rule cr = defineRule(cn, doc, rules)
-			if (cr != null) {
-				childRules += cr
-			}
+		if (r == grammar.Unit) {
+			return defineUnit(pn, doc, rules)
 		}
 		switch (r) {
 
 			case grammar.Seq:
-				assert childRules.size() >= 1 : "${r.getDescription()}  $pn  $childRules"
-				return seq(childRules)
-			case grammar.Star:
-				assert childRules.size() == 1 : "${r.getDescription()}  $pn"
-				return star(childRules[0])
-			case grammar.Plus:
-				assert childRules.size() == 1 : "${r.getDescription()}  $pn"
-				return plus(childRules[0])
-			case grammar.Opt:
-				assert childRules.size() == 1 : "${r.getDescription()}  $pn"
-				return opt(childRules[0])
+				List<Rule> childRules = []
+				collectUnitRules(pn, doc, rules, childRules)
+				return childRules.size() == 1 ? childRules[0] : seq(childRules as Rule[])
+			
+			case grammar.Alt:
+				List<Rule> childRules = []
+				collectUnitRules(pn, doc, rules, childRules)
+				return childRules.size() == 1 ? childRules[0] : alt(childRules as Rule[])			
+				
 			case grammar.Literal:
 				String s = doc.subseq(pn.start+1, pn.start + pn.matchLength-1)
 				return lit(s)
 			case grammar.Regex:
 				String s = doc.subseq(pn.start+1, pn.start + pn.matchLength-1)
 				return reg(s)
+			case grammar.Eof:
+				return eof()
 			case grammar.Ident:
 				String s = doc.subseq(pn.start, pn.start + pn.matchLength)
 				assert rules[s] != null : " Expecting a predefined rule for $s"
 				return rules[s]
 			default:
+				List<Rule> childRules = []
+				pn.children.each { cn ->
+					Rule cr = defineRule(cn, doc, rules)
+					if (cr != null) {
+						childRules << cr
+					}
+				}
 				assert childRules.size() <= 1 : "${r.getDescription()}  $pn"
-				return childRules.length == 0 ? null : childRules[0]
+				return childRules.size() == 0 ? null : childRules[0]
 		}
 		return null
 	}
 
-	Rule defineAlt(ParseNode pn, Document doc, Map<String, Rule> rules) {
-		assert pn.children.size() == 2 : "Alt must not have ${pn.children.size()} children"
-		Rule[] childRules = []
-		childRules += defineRule(pn.children[0], doc, rules) as Rule
-		ParseNode plusChild = pn.children[1]
-		plusChild.children.each { cn ->
-			Rule cr = defineRule(cn, doc, rules) as Rule
-			if (cr != null) {
-				childRules += cr
-			}
+	
+	void collectUnitRules(ParseNode pn, Document doc, Map<String, Rule> rules, List<Rule> result) {
+		if (pn.rule != grammar.Unit) {
+			pn.children.each { cn -> collectUnitRules(cn, doc, rules, result) }
+		} else { // Unit
+			result << defineUnit(pn, doc, rules)
 		}
-		return alt(childRules)
-
 	}
 	
+	
+	Rule defineUnit(ParseNode pn, Document doc, Map<String, Rule> rules) {
+		assert pn.children.size() == 2 : "Unit must have 2 children, not ${pn.children.size()} children"
+		Rule operandRule = defineRule(pn.children[0], doc, rules)
+		ParseNode opNode = pn.children[1]
+		if (opNode.matchLength == 0) {
+			return operandRule
+		}
+		opNode = opNode.children[0]
+		assert opNode.rule == grammar.PostfixOp : "Expected PostfixOp rule: $opNode"
+		switch (opNode.children[0].rule) {
+			case grammar.LitStar:
+				return star(operandRule)
+			case grammar.LitPlus:
+				return plus(operandRule)
+			case grammar.Qmark:
+				return opt(operandRule)
+			default:
+				assert false : "PostfixOp matched with an unknown rule: $opNode"
+
+		}
+	
+	}
 	
 	private class Dependencies extends HashSet<String> implements Comparable<Dependencies> {
 		

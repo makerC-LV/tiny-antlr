@@ -1,0 +1,15 @@
+/*
+Some text
+*/
+
+//lc
+
+LHS : 'part1' 'part2' ;
+
+/*  some text */  
+
+LHS2    : 
+'part' |'part'| 'blah';  // midline comment
+
+//  Final text
+

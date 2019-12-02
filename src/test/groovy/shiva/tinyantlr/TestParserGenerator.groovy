@@ -1,4 +1,4 @@
-package shiva.antlr
+package shiva.tinyantlr
 
 import org.junit.Test
 
@@ -8,9 +8,12 @@ import shiva.cfg.Rule
 import shiva.cfg.StringDocument
 import shiva.swingcfg.ParseTreeNode
 import shiva.swingcfg.ParseTreeView
+import shiva.tinyantlr.GeneratedParser
+import shiva.tinyantlr.ParserGenerator
+import shiva.tinyantlr.TinyAntlr
 
 @CompileStatic
-class TestGrammarGenerator {
+class TestParserGenerator {
 
 	
 	public void testGenerate() {
@@ -31,15 +34,16 @@ class TestGrammarGenerator {
 	}
 	static private ParseNode generateAndParse(String defn, String sentence, String ruleName) {
 		Rule.DEBUG = false
-		SmallAntlrGrammar ag = new SmallAntlrGrammar();
+		TinyAntlr ag = new TinyAntlr();
 		StringDocument doc = new StringDocument(defn);
 		ParseNode pn = ag.parse(doc)
 		ParseTreeView.show(ParseTreeNode.construct(pn))
 		
-		GrammarGenerator.DEBUG = true
-		GrammarGenerator gg = new GrammarGenerator(ag)
+		ParserGenerator.DEBUG = true
+		ParserGenerator gg = new ParserGenerator(ag)
 		StringDocument sent = new StringDocument(sentence)
-		Rule start = gg.generate(pn, doc)[ruleName]
+		GeneratedParser gp = gg.generate(pn, doc)
+		Rule start = gp.getRule(ruleName)
 		start.setDescriptions()
 		Rule.DEBUG = true
 		return start.apply(sent, 0)

@@ -20,13 +20,13 @@ abstract public class Rule {
 
 	protected boolean ignoreWhitespace
 	
-	private Map<Integer, ParseNode> cache = new HashMap<>()
+	//private Map<Integer, ParseNode> cache = new HashMap<>()
 
 	abstract protected ParseNode applyInternal(Document doc, int start)
 	
 	abstract protected Rule[] dependencies()
 	
-	abstract protected String descriptionFromDependencies()
+	abstract public String descriptionFromDependencies()
 	
 	
 	public Rule skipWs() {
@@ -47,7 +47,7 @@ abstract public class Rule {
 		try {
 			unguardedApply(start, doc);
 		} catch (Exception e) {
-			throw new RuntimeException("While applying ${getDescription()}", e)
+			throw new RuntimeException("While applying rule ${getDescription()}", e)
 		}
 	}
 
@@ -59,9 +59,10 @@ abstract public class Rule {
 		if (debug || DEBUG) {
 			println("Applying ${getDescription()} [start:$start] to: ..[${doc.getDiagnostic(start, 40)}]..")
 		}
-		ParseNode cached = cache.get(start);
-		ParseNode res = cached == null ? applyInternal(doc, start) : cached;
-		cache.put(start, res)
+//		ParseNode cached = cache.get(start);
+//		ParseNode res = cached == null ? applyInternal(doc, start) : cached
+		ParseNode res = applyInternal(doc, start)
+//		cache.put(start, res)
 
 		if (debug || DEBUG) {
 			println(res);
@@ -138,24 +139,26 @@ abstract public class Rule {
 		}
 	}
 	
-	public void resetCache() {
-		
-		Set<Rule> visited = new HashSet<>()
-		resetCacheDfs(visited);
-	}
-
-	protected void resetCacheDfs(HashSet<Rule> visited) {
-		if (visited.contains(this)) {
-			return
-		}
-		cache.clear()
-		visited.add(this)
-		dependencies().each { r -> resetCacheDfs(visited) }
-	}
+//	public Rule resetCache() {
+//		
+//		Set<Rule> visited = new HashSet<>()
+//		resetCacheDfs(visited);
+//		return this
+//	}
+//
+//	protected void resetCacheDfs(HashSet<Rule> visited) {
+//		if (visited.contains(this)) {
+//			return
+//		}
+//		cache.clear()
+//		visited.add(this)
+//		dependencies().each { r -> resetCacheDfs(visited) }
+//	}
 	
-	public void skipWsRecursive() {
+	public Rule skipWsRecursive() {
 		Set<Rule> visited = new HashSet<>()
 		skipWsDfs(visited);
+		return this
 	}
 
 	protected void skipWsDfs(HashSet<Rule> visited) {
@@ -165,5 +168,7 @@ abstract public class Rule {
 		skipWs()
 		visited.add(this)
 		dependencies().each { r -> r.skipWsDfs(visited) }
-	}
+	} 
+	
+	
 }

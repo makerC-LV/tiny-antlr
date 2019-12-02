@@ -1,4 +1,4 @@
-package shiva.antlr
+package shiva.tinyantlr
 
 import static shiva.cfg.Rules.*
 
@@ -6,7 +6,7 @@ import java.lang.reflect.Field
 import java.lang.reflect.Type
 
 import groovy.transform.CompileStatic
-import shiva.cfg.Grammar
+import shiva.cfg.DefaultParser
 import shiva.cfg.ParseNode
 import shiva.cfg.Rule
 import shiva.cfg.StringDocument
@@ -15,21 +15,23 @@ import shiva.swingcfg.ParseTreeNode
 import shiva.swingcfg.ParseTreeView
 
 @CompileStatic
-class SmallAntlrGrammar extends Grammar {
+class TinyAntlr extends DefaultParser {
 
 	/**
 	 * Program -> Body EOF
 	 * Body -> BodyPart*
 	 * BodyPart -> LC | BC | RuleDef
 	 * RuleDef -> Ident ':' Exp ';'
-	 * Exp -> Seq | Alt | Opt | Star | Plus
+	 * Exp -> Seq | Alt 
 	 * Seq -> Unit+
-	 * Unit -> Lit | Reg | Ident | Group
-	 * Group -> '(' Exp ')'
 	 * Alt -> Unit ('|' Unit)+
-	 * Opt -> Unit '?'
-	 * Star -> Unit '*'
-	 * Plus -> Unit '+'
+	 * 
+	 *  // Avoid left recursion
+	 *  Unit -> Single PostfixOp ?
+	 *  Single -> Lit | Reg | Ident | Group
+	 *  PostfixOp -> '*' | '+' | '?'
+	 *  
+	 * Group -> '(' Exp ')'
 	 *
 	 */
 
@@ -42,24 +44,22 @@ class SmallAntlrGrammar extends Grammar {
 	Rule Bar = lit("|")
 	Rule Ident = identifier()
 	Rule Literal = reg("'.*?'")
-	Rule Regex = seq(lit("/.*?/"))
-
+	Rule Regex = seq(reg("/.*?/"))
+	Rule Eof = lit('EOF')
+	
 	Rule LineComment = lineComment()
 	Rule BlockComment = blockComment()
 
-	Lazy Group = lazy()
-	Rule Unit = alt(Literal, Regex, Ident, Group)
+	Lazy Exp = lazy()  // Exp.setRule(alt(Seq, Alt))
+	Rule Group = seq(LPar, Exp, RPar)
+	Rule PostfixOp = alt(LitStar, LitPlus, Qmark)
+	Rule Single = alt(Literal, Regex, Ident, Eof, Group)
+	Rule Unit = seq(Single, opt(PostfixOp))
 
 	Rule Seq = plus(Unit)
-	Rule Alt = seq(Unit, plus(seq(Bar, Unit)))
+	Rule AltTail = seq(Bar, Unit)
+	Rule Alt = seq(Unit, plus(AltTail))
 
-
-
-	Rule Opt = seq(Unit, Qmark)
-	Rule Star = seq(Unit, LitStar)
-	Rule Plus = seq(Unit, LitPlus)
-
-	Lazy Exp = lazy()
 	Rule RuleDef = seq(Ident, lit(":"), Exp, lit(";"))
 	Rule BodyPart = alt(LineComment, BlockComment, RuleDef)
 	Rule Body = plus(BodyPart)
@@ -67,19 +67,17 @@ class SmallAntlrGrammar extends Grammar {
 
 
 
-	public SmallAntlrGrammar() {
+	public TinyAntlr() {
 
 		createRules()
 
-		//		Exp.setRule(alt(Literal, Regex, Ident, OptExp, StarExp, PlusExp, AltExp, SeqExp))
 		assignNamesToRules()
 		Program.skipWsRecursive()
 	}
 
 	private void createRules() {
 
-		Group.setRule(seq(LPar, Exp, RPar))
-		Exp.setRule(alt(Alt, Opt, Star, Plus, Seq))
+		Exp.setRule(alt(Alt, Seq))
 	}
 
 
@@ -88,9 +86,6 @@ class SmallAntlrGrammar extends Grammar {
 
 		return parse(Program, doc);
 	}
-
-
-
 
 
 	// Set the names of the instance rules
@@ -109,15 +104,15 @@ class SmallAntlrGrammar extends Grammar {
 	}
 
 	public static void main(String[] args) {
-		String defn = SmallAntlrGrammar.class.getResource('/sargam.bnf').text
+		String defn = TinyAntlr.class.getResource('/sargam.bnf').text
 
 		StringDocument doc = new StringDocument(defn);
 		Rule.DEBUG = true
-		SmallAntlrGrammar ag = new SmallAntlrGrammar()
+		TinyAntlr ag = new TinyAntlr()
 		ParseNode pn = ag.parse(doc)
 		ParseTreeView.show(ParseTreeNode.construct(pn))
 
-		GrammarGenerator gg = new GrammarGenerator(ag)
+		ParserGenerator gg = new ParserGenerator(ag)
 		gg.generate(pn, doc)
 
 		println("done");
