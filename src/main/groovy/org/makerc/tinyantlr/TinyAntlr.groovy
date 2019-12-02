@@ -55,7 +55,7 @@ class TinyAntlr extends DefaultParser {
 	Lazy Exp = lazy()  // Exp.setRule(alt(Seq, Alt))
 	Rule Group = seq(LPar, Exp, RPar)
 	Rule PostfixOp = alt(LitStar, LitPlus, Qmark)
-	Rule Single = alt(Literal, Regex, Ident, Eof, Group)
+	Rule Single = alt(Literal, Regex, Eof, Ident, Group)
 	Rule Unit = seq(Single, opt(PostfixOp))
 
 	Rule Seq = plus(Unit)

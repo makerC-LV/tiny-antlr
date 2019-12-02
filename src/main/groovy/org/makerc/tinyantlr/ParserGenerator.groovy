@@ -43,13 +43,9 @@ class ParserGenerator {
 			}
 			// Create a lazy rule for each dependency of ident
 			d.each { s -> 
-				if (s.equals('EOF')) {
-					generated[s] = eof()
-				} else {
-					generated[s] = lazy().setName(s)
-					if (DEBUG) {
-						println "Creating lazy rule $s"
-					}
+				generated[s] = lazy().setName(s)
+				if (DEBUG) {
+					println "Creating lazy rule $s"
 				}
 			 }
 			// Define the rule for ident

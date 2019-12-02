@@ -50,7 +50,6 @@ class TestTinyAntlr {
 	
 	@Test 
 	public void testRegex() {
-		Rule.DEBUG = true
 		ParseNode pn = test("/abc/", sg.Regex)
 		assertTrue(pn.matched)
 		assertEquals(5, pn.matchLength)
@@ -74,7 +73,7 @@ class TestTinyAntlr {
 	@Test
 	public void testPostfixOp() {
 		
-		ParseNode pn = test("a", sg.PostfixOp)
+		ParseNode pn = test("*", sg.PostfixOp)
 		assertTrue(pn.matched)
 		assertEquals(1, pn.matchLength)
 	}
@@ -92,6 +91,17 @@ class TestTinyAntlr {
 		assertEquals(25, pn.matchLength)
 	}
 	
+	@Test
+	public void testEOF() {
+		ParseNode pn = test("EOF", sg.Eof)
+		assertTrue(pn.matched)
+		assertEquals(3, pn.matchLength)
+		
+		pn = test("a EOF", sg.Seq)
+		assertTrue(pn.matched)
+		assertEquals(5, pn.matchLength)
+		
+	}
 	static private ParseNode test(String sentence, Rule rule) {
 		
 		StringDocument doc = new StringDocument(sentence);
