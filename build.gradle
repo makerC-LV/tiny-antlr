@@ -16,22 +16,13 @@ repositories {
     // You can declare any Maven/Ivy/file repository here.
     jcenter()
     
-	maven { url 'https://jitpack.io' }
-    
 }
 
 
 
 
 dependencies {
-    // This dependency is exported to consumers, that is to say found on their compile classpath.
-    implementation 'org.apache.commons:commons-math3:3.6.1'
-
-    // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    implementation 'com.google.guava:guava:27.0.1-jre'
-    
-//	implementation 'com.github.makerC-LV:lingwah:master-SNAPSHOT'
-	
+ 	
 	// https://mvnrepository.com/artifact/org.codehaus.groovy/groovy-all
 	implementation group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.5.8', ext: 'pom'
 
