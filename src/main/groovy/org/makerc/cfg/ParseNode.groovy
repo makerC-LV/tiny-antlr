@@ -11,6 +11,7 @@ public class ParseNode {
 	boolean matched;
 	int start;
 	int matchLength = -1;
+	String diagString
 	List<ParseNode> children = [];
 	
 	
@@ -37,10 +38,26 @@ public class ParseNode {
 		}
 	}
 	
+	void markup(Document doc) {
+		if (matched) {
+			int end = start + matchLength
+			if (matchLength < 80) {
+				diagString = '[' + doc.subseq(start, end) + ']'
+			} else {
+				diagString = '[' + doc.subseq(start, start + 40) + ' ... ' +
+				doc.subseq(end - 40, end) + ']'
+			}
+		} else {
+			int end = Math.min(start + 40, doc.length())
+			diagString = '[' + doc.subseq(start, end) + ' ...'
+		}
+		children.each { c -> c.markup(doc) }
+	}
+	
 	@Override
 	public String toString() {
 		String prefix = "ParseNode Rule: ${rule.getDescription()} "
-		return matched ? "$prefix matched [$start - ${start + matchLength}]" : "$prefix failed"
+		return matched ? "$prefix matched [$start - ${start + matchLength} $diagString]" : "$prefix failed $start $diagString"
 	}
 
 	@TupleConstructor

@@ -57,7 +57,7 @@ class TestParserGenerator {
 		
 		StringDocument doc = new StringDocument(defn);
 		ParseNode pn = ag.parse(doc)
-		ParseTreeView.show(ParseTreeNode.construct(pn))
+		ParseTreeView.show(ParseTreeNode.construct(pn, doc))
 		
 		ParserGenerator.DEBUG = true
 //		ParserGenerator gg = new ParserGenerator(ag)

@@ -69,6 +69,7 @@ class TinyAntlr extends DefaultParser {
 
 
 	ParserGenerator pg = new ParserGenerator(this);
+	
 
 	public TinyAntlr() {
 		createRules()

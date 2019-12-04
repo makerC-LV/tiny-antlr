@@ -2,6 +2,7 @@ package org.makerc.swingcfg
 
 import javax.swing.tree.DefaultMutableTreeNode
 
+import org.makerc.cfg.Document
 import org.makerc.cfg.ParseNode
 
 import groovy.transform.TupleConstructor
@@ -14,9 +15,10 @@ class ParseTreeNode extends DefaultMutableTreeNode {
 		setUserObject(node);
 	}
 	
-	public static ParseTreeNode construct(ParseNode node) {
+	public static ParseTreeNode construct(ParseNode node, Document doc) {
 		ParseTreeNode tnode = new ParseTreeNode(node)
-		node.children.each { n -> tnode.add(construct(n)) }
+		node.children.each { n -> tnode.add(construct(n, doc)) }
+		node.markup(doc)
 		return tnode;
 	}
 }

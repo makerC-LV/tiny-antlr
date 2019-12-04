@@ -14,8 +14,14 @@ import org.makerc.cfg.Rules
 @CompileStatic
 class DefaultParser {
 	
+	private ParseNode lastParseNode ;
+	
 	public DefaultParser() {
 		
+	}
+	
+	public ParseNode getLastParseNode() {
+		return lastParseNode;
 	}
 	
 	// Set the names of the instance rules
@@ -42,6 +48,7 @@ class DefaultParser {
 		app.setDescriptions()
 		//app.resetCache()
 		ParseNode r = app.apply(d, 0);
+		lastParseNode = r
 		if (!r.matched) {
 			ErrorInfo ei = r.errorInfo(d);
 			
